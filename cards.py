@@ -133,7 +133,29 @@ def return_hand(hole_cards, board):
     if flush[0]:
         # Return Flush and the 5 cards that make it
         return hands[5], flush[1]
-    return None
+    # Check for Straight
+    straight = is_straight(all_cards)
+    if straight[0]:
+        # Return Straight and the 5 cards that make it
+        return hands[4], straight[1]
+    # Check for Three of a Kind
+    three_of_a_kind = is_three_of_a_kind(all_cards)
+    if three_of_a_kind[0]:
+        # Return Three of a Kind and the 5 cards that make it
+        return hands[3], three_of_a_kind[1]
+    # Check for Two Pair
+    two_pair = is_two_pair(all_cards)
+    if two_pair[0]:
+        # Return Two Pair and the 5 cards that make it
+        return hands[2], two_pair[1]
+    # Check for Pair
+    pair = is_pair(all_cards)
+    if pair[0]:
+        # Return Pair and the 5 cards that make it
+        return hands[1], pair[1]
+    # Return High Card and the 5 highest cards
+    return hands[0], sort_by_rank(all_cards)[:5]
+
 
 
 # Get 7 cards and return True if there is a flush
@@ -226,3 +248,74 @@ def is_full_house(cards):
                     # Return full house and the 5 cards that make it
                     return True, three_of_a_kind + pair
     return False, cards
+
+
+def is_three_of_a_kind(cards):
+    # Sort cards by rank
+    cards = sort_by_rank(cards)
+    # Get all ranks
+    ranks = [card[0] for card in cards]
+    # Check for three of a kind
+    for rank in ranks:
+        if ranks.count(rank) == 3:
+            # Get the 3 cards that make the three of a kind
+            three_of_a_kind = [card for card in cards if card[0] == rank]
+            # Get the remaining cards
+            remaining_cards = [card for card in cards if card[0] != rank]
+            # Get other 2 highest cards
+            remaining_cards = sort_by_rank(remaining_cards)
+            remaining_cards = remaining_cards[0:2]
+            # Return three of a kind and the 5 cards that make it
+            return True, three_of_a_kind + remaining_cards
+    return False, cards
+
+
+def is_two_pair(cards):
+    # sort cards by rank
+    cards = sort_by_rank(cards)
+    # Get all ranks
+    ranks = [card[0] for card in cards]
+    # Check for two pairs
+    for rank in ranks:
+        if ranks.count(rank) == 2:
+            # Get the 2 cards that make the pair
+            pair = [card for card in cards if card[0] == rank]
+            # Get the remaining cards
+            remaining_cards = [card for card in cards if card[0] != rank]
+            # Get all ranks
+            ranks = [card[0] for card in remaining_cards]
+            # Check for second pair
+            for rank in ranks:
+                if ranks.count(rank) == 2:
+                    # Get the 2 cards that make the second pair
+                    second_pair = [card for card in remaining_cards if card[0] == rank]
+                    # Get the remaining card
+                    remaining_cards = [card for card in remaining_cards if card[0] != rank]
+                    remaining_cards = sort_by_rank(remaining_cards)
+                    remaining_cards = remaining_cards[0]
+                    # Return two pair and the 5 cards that make it
+                    return True, pair + second_pair + [remaining_cards]
+    return False, cards
+
+
+def is_pair(cards):
+    # Sort cards by rank
+    cards = sort_by_rank(cards)
+    # Get all ranks
+    ranks = [card[0] for card in cards]
+    # Check for pair
+    for rank in ranks:
+        if ranks.count(rank) == 2:
+            # Get the 2 cards that make the pair
+            pair = [card for card in cards if card[0] == rank]
+            # Get the remaining cards
+            remaining_cards = [card for card in cards if card[0] != rank]
+            # Get other 3 highest cards
+            remaining_cards = sort_by_rank(remaining_cards)
+            remaining_cards = remaining_cards[0:3]
+            # Return pair and the 5 cards that make it
+            return True, pair + remaining_cards
+    return False, cards
+
+
+

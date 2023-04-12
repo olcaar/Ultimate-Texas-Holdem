@@ -1,6 +1,9 @@
+import os
 import random
 
 # Define the deck of cards
+
+
 suits = ['♠️', '♥️', '♦️', '♣️']
 ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
 
@@ -13,6 +16,8 @@ straights = [['A', 'K', 'Q', 'J', '10'], ['K', 'Q', 'J', '10', '9'], ['Q', 'J', 
 # Define the possible hands in Texas Hold'em
 hands = ['High Card', 'Pair', 'Two Pair', 'Three of a Kind', 'Straight', 'Flush', 'Full House', 'Four of a Kind',
          'Straight Flush', 'Royal Flush']
+# enumerate the hands
+hand_values = {hand: value for value, hand in enumerate(hands)}
 
 
 class Deck:
@@ -29,42 +34,52 @@ class Deck:
     def shuffle(self):
         self.__init__()
 
+    def deal_two_cards(self):
+        return [self.cards.pop() for i in range(2)]
+
     def deal_seven_cards_for_testing(self):
         return [self.cards.pop() for i in range(7)]
 
-    def deal_five_cards_for_testing(self):
+    def deal_three_cards(self):
+        return [self.cards.pop() for i in range(3)]
+
+    def deal_five_cards(self):
         return [self.cards.pop() for i in range(5)]
 
-    def deal_two_cards_for_testing(self):
-        return [self.cards.pop() for i in range(2)]
 
 
 class PlayerBalance:
     def __init__(self, balance):
         self.balance = balance
 
-        def add_funds(self, amount):
-            self.balance += amount
+    def add_funds(self, amount):
+        self.balance += amount
 
-        def remove_funds(self, amount):
-            self.balance -= amount
+    def remove_funds(self, amount):
+        self.balance -= amount
 
-        def get_balance(self):
-            return self.balance
+    def get_balance(self):
+        return self.balance
 
 
 class Bets:
-    def __init__(self, ante, blind, trip, play):
+    def __init__(self):
+        self.ante = 0
+        self.blind = 0
+        self.trips = 0
+        self.play = 0
+
+    def bet(self, ante, trips):
         self.ante = ante
-        self.blind = blind
-        self.trip = trip
+        self.blind = ante
+        self.trips = trips
 
     def add_play(self, amount):
         self.play += amount
 
     def get_bets(self):
         # return all bets as a list
-        return [self.ante, self.blind, self.trip, self.play]
+        return [self.ante, self.blind, self.trips, self.play]
 
 
 class PlayerCards:
@@ -155,7 +170,6 @@ def return_hand(hole_cards, board):
         return hands[1], pair[1]
     # Return High Card and the 5 highest cards
     return hands[0], sort_by_rank(all_cards)[:5]
-
 
 
 # Get 7 cards and return True if there is a flush
@@ -318,4 +332,238 @@ def is_pair(cards):
     return False, cards
 
 
+def check_winner(player_hand, dealer_hand, board):
+    # Get 5 cards hands for dealer and player
+    player_hand = return_hand(player_hand, board)
+    dealer_hand = return_hand(dealer_hand, board)
+    if hand_values[player_hand[0]] > hand_values[dealer_hand[0]]:
+        return 'Player'
+    elif hand_values[player_hand[0]] < hand_values[dealer_hand[0]]:
+        return 'Dealer'
+    # TODO: compare hands if they are the same
+    else:
+        return 'Tie'
 
+
+# Create a state machine for the game : 0. IDLE, 1. BETTING, 2. DEALING,
+# 3. PLAYER_TURN_PRE_FLOP, 4. PLAYER_BET_3X_OR_4X, 5. OPEN_FLOP, 6. PLAYER_TURN_FLOP, 7. PLAYER_BET_2X,
+# 8. OPEN_TURN_AND_RIVER, 9. PLAYER_TURN_FULL_BOARD, 10. SHOWDOWN, 11. UPDATE_BALANCE
+
+States = {'IDLE': 0, 'BETTING': 1, 'DEALING': 2, 'PLAYER_TURN_PRE_FLOP': 3, 'PLAYER_BET_3X_OR_4X': 4, 'OPEN_FLOP': 5,
+          'PLAYER_TURN_FLOP': 6, 'PLAYER_BET_2X': 7, 'OPEN_TURN_AND_RIVER': 8, 'PLAYER_TURN_FULL_BOARD': 9,
+          'SHOWDOWN': 10, 'UPDATE_BALANCE': 11}
+
+
+class Game:
+    def __init__(self):
+        self.player_balance = PlayerBalance(1000)
+        self.deck = Deck()
+        self.board = []
+        self.player_hand = []
+        self.dealer_hand = []
+        self.bets = Bets()
+
+    def print_game(self):
+        # Delete terminal
+        os.system('cls' if os.name == 'nt' else 'clear')
+        # Print game state
+        print('Player balance: {}'.format(self.player_balance.balance))
+        print('Board: {}'.format(self.board))
+        print('Player hand: {}'.format(self.player_hand))
+        print('Dealer hand: {}'.format(self.dealer_hand))
+        print('Bets: {}'.format(self.bets.get_bets()))
+
+    def start_game(self):
+        self.state_zero()
+
+    def state_zero(self):
+        input("Press Enter to continue...")
+        self.deck.shuffle()
+        self.board = []
+        self.player_hand = []
+        self.dealer_hand = []
+        self.bets = Bets()
+        self.print_game()
+        self.state_one()
+
+    def state_one(self):
+        self.print_game()
+        # Ask player for ante and trips bet
+        ante_bet = int(input('Enter ante bet: '))
+        trips_bet = int(input('Enter trips bet: '))
+        # Check if player has enough money
+        if self.player_balance.balance < ante_bet * 2 + trips_bet:
+            print('Not enough money')
+            self.state_one()
+            return
+        # Place bets
+        self.bets.bet(ante_bet, trips_bet)
+        # Update player balance
+        self.player_balance.remove_funds(ante_bet * 2 + trips_bet)
+        self.state_two()
+
+    def state_two(self):
+        self.player_hand = self.deck.deal_two_cards()
+        self.print_game()
+        self.state_three()
+
+    def state_three(self):
+        self.print_game()
+        # Ask player for check/ Bet 3x/ Bet 4x
+        player_action = input('Enter action (check, bet 3x, bet 4x): ')
+        if player_action == 'check':
+            self.state_five()
+        elif player_action == 'bet 3x':
+            # Check if player has enough money
+            if self.player_balance.balance < self.bets.ante * 3:
+                print('Not enough money')
+                self.state_zero()
+                return
+            # Place bet
+            self.bets.add_play(self.bets.ante * 3)
+            # Update player balance
+            self.player_balance.remove_funds(self.bets.ante * 3)
+            self.state_four()
+        elif player_action == 'bet 4x':
+            # Check if player has enough money
+            if self.player_balance.balance < self.bets.ante * 4:
+                print('Not enough money')
+                self.state_zero()
+                return
+            # Place bet
+            self.bets.add_play(self.bets.ante * 4)
+            # Update player balance
+            self.player_balance.remove_funds(self.bets.ante * 4)
+            self.state_four()
+        else:
+            print('Invalid action')
+            self.state_three()
+
+    def state_four(self):
+        self.print_game()
+        # Open 5 cards on the board
+        self.board = self.deck.deal_five_cards()
+        self.state_ten()
+
+    def state_five(self):
+        self.print_game()
+        # Open 3 cards on the board
+        self.board = self.deck.deal_three_cards()
+        self.state_six()
+
+    def state_six(self):
+        self.print_game()
+        print('Player hand: {}'.format(return_hand(self.player_hand, self.board)))
+        # Ask player for check/ Bet 2x
+        player_action = input('Enter action (check, bet 2x): ')
+        if player_action == 'check':
+            self.state_eight()
+        elif player_action == 'bet 2x':
+            # Check if player has enough money
+            if self.player_balance.balance < self.bets.ante * 2:
+                print('Not enough money')
+                self.state_zero()
+                return
+            # Place bet
+            self.bets.add_play(self.bets.ante * 2)
+            # Update player balance
+            self.player_balance.remove_funds(self.bets.ante * 2)
+            self.state_seven()
+
+    def state_seven(self):
+        self.print_game()
+        # Add 2 cards on the board
+        self.board += self.deck.deal_two_cards()
+        self.state_ten()
+
+    def state_eight(self):
+        self.print_game()
+        # Add 2 cards on the board
+        self.board += self.deck.deal_two_cards()
+        self.state_nine()
+
+    def state_nine(self):
+        self.print_game()
+        print('Player hand: {}'.format(return_hand(self.player_hand, self.board)))
+        # Ask player for Fold/ Bet 1x
+        player_action = input('Enter action (fold, bet 1x): ')
+        if player_action == 'fold':
+            self.state_eleven()
+        elif player_action == 'bet 1x':
+            # Check if player has enough money
+            if self.player_balance.balance < self.bets.ante:
+                print('Not enough money')
+                self.state_zero()
+                return
+            # Place bet
+            self.bets.add_play(self.bets.ante)
+            # Update player balance
+            self.player_balance.remove_funds(self.bets.ante)
+            self.state_ten()
+
+    def state_ten(self):
+        # Deal dealer hand
+        self.dealer_hand = self.deck.deal_two_cards()
+        self.print_game()
+        # Compare hands
+        winner = check_winner(self.player_hand, self.dealer_hand, self.board)
+        player_final_hand = return_hand(self.player_hand, self.board)
+        dealer_final_hand = return_hand(self.dealer_hand, self.board)
+        trips_payout = get_trips_payout(player_final_hand, self.bets.trips)
+        # Update player balance
+        self.player_balance.add_funds(trips_payout)
+        if winner == 'Player':
+            blind_payout = get_blind_payout(player_final_hand, self.bets.blind)
+            self.player_balance.add_funds(blind_payout + self.bets.play * 2)
+            #TODO: pay ante only if dealer has a pair or better
+            self.player_balance.add_funds(self.bets.ante * 2)
+        print(f'{winner} wins')
+        print('Player hand: {}'.format(player_final_hand))
+        print('Dealer hand: {}'.format(dealer_final_hand))
+        self.state_zero()
+
+    def state_eleven(self):
+        self.print_game()
+        player_final_hand = return_hand(self.player_hand, self.board)
+        # pay for trips
+        trips_payout = get_trips_payout(player_final_hand, self.bets.trips)
+        # Update player balance
+        self.player_balance.add_funds(trips_payout)
+        print('Player folds')
+        self.state_zero()
+
+
+def get_trips_payout(hand, trips):
+    if hand == 'Royal Flush':
+        return trips * 50 + trips
+    elif hand == 'Straight Flush':
+        return trips * 40 + trips
+    elif hand == 'Four of a Kind':
+        return trips * 30 + trips
+    elif hand == 'Full House':
+        return trips * 8 + trips
+    elif hand == 'Flush':
+        return trips * 6 + trips
+    elif hand == 'Straight':
+        return trips * 5 + trips
+    elif hand == 'Three of a Kind':
+        return trips * 3 + trips
+    else:
+        return 0
+
+
+def get_blind_payout(hand, blind):
+    if hand == 'Royal Flush':
+        return blind * 500 + blind
+    elif hand == 'Straight Flush':
+        return blind * 50 + blind
+    elif hand == 'Four of a Kind':
+        return blind * 10 + blind
+    elif hand == 'Full House':
+        return blind * 3 + blind
+    elif hand == 'Flush':
+        return blind * 1.5 + blind
+    elif hand == 'Straight':
+        return blind * 1 + blind
+    else:
+        return blind

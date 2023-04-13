@@ -2,7 +2,7 @@ import os
 import random
 
 # Define the deck of cards
-
+import time
 
 suits = ['♠️', '♥️', '♦️', '♣️']
 ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
@@ -193,6 +193,8 @@ def is_flush(cards):
 
 # Check for straight
 def is_straight(cards):
+    # Sort cards
+    cards = sort_by_rank(cards)
     # Get all ranks
     ranks = [card[0] for card in cards]
     # Check for straight
@@ -205,6 +207,9 @@ def is_straight(cards):
                 if ranks.count(card[0]) > 1:
                     straight.remove(card)
                     ranks.remove(card[0])
+            if straight[4][0] == '2' and straight[0][0] == 'A':
+                # Move ace to the end of the list
+                straight = straight[1:] + [straight[0]]
             return True, straight
     return False, straight
 
@@ -339,9 +344,8 @@ def check_winner(player_hand, dealer_hand, board):
         return 'Player'
     elif hand_values[player_hand[0]] < hand_values[dealer_hand[0]]:
         return 'Dealer'
-    # TODO: compare hands if they are the same rank
     else:
-        return 'Tie'
+        return get_winner_if_same_hand_rank(player_hand, dealer_hand, player_hand[0])
 
 
 States = {'IDLE': 0, 'BETTING': 1, 'DEALING': 2, 'PLAYER_TURN_PRE_FLOP': 3, 'PLAYER_BET_3X_OR_4X': 4, 'OPEN_FLOP': 5,
@@ -357,6 +361,7 @@ class Game:
         self.player_hand = []
         self.dealer_hand = []
         self.bets = Bets()
+        self.money_won_in_round = 0
 
     def print_game(self):
         # Delete terminal
@@ -380,15 +385,33 @@ class Game:
         self.bets = Bets()
         self.print_game()
         self.state_one()
+        self.money_won_in_round = 0
 
     def state_one(self):
         self.print_game()
         # Ask player for ante and trips bet
-        ante_bet = int(input('Enter ante bet: '))
-        trips_bet = int(input('Enter trips bet: '))
+        ante_bet = input('Enter ante bet: ')
+        if ante_bet.isnumeric() and int(ante_bet) > 0:
+            ante_bet = int(ante_bet)
+        else:
+            print('Invalid input, press enter to try again')
+            # wait for 1.5 seconds
+            time.sleep(1.5)
+            self.state_one()
+        # check if input is valid
+        trips_bet = input('Enter trips bet: ')
+        if trips_bet.isnumeric() and int(trips_bet) > 0:
+            trips_bet = int(trips_bet)
+        else:
+            print('Invalid input, press enter to try again')
+            # wait for 1.5 seconds
+            time.sleep(1.5)
+            self.state_one()
         # Check if player has enough money
         if self.player_balance.balance < ante_bet * 2 + trips_bet:
-            input('Not enough money, press enter to try lower bets')
+            print('Not enough money, press enter to try lower bets')
+            # wait for 1.5 seconds
+            time.sleep(1.5)
             self.state_one()
             return
         # Place bets
@@ -412,7 +435,9 @@ class Game:
             # Check if player has enough money
             if self.player_balance.balance < self.bets.ante * 3:
                 print('Not enough money')
-                self.state_zero()
+                # wait for 1.5 seconds
+                time.sleep(1.5)
+                self.state_three()
                 return
             # Place bet
             self.bets.add_play(self.bets.ante * 3)
@@ -423,8 +448,9 @@ class Game:
             # Check if player has enough money
             if self.player_balance.balance < self.bets.ante * 4:
                 print('Not enough money')
-                self.state_zero()
-                return
+                # wait for 1.5 seconds
+                time.sleep(1.5)
+                self.state_three()
             # Place bet
             self.bets.add_play(self.bets.ante * 4)
             # Update player balance
@@ -432,6 +458,8 @@ class Game:
             self.state_four()
         else:
             print('Invalid action')
+            # wait for 1.5 seconds
+            time.sleep(1.5)
             self.state_three()
 
     def state_four(self):
@@ -457,13 +485,19 @@ class Game:
             # Check if player has enough money
             if self.player_balance.balance < self.bets.ante * 2:
                 print('Not enough money')
-                self.state_zero()
-                return
+                # wait for 1.5 seconds
+                time.sleep(1.5)
+                self.state_six()
             # Place bet
             self.bets.add_play(self.bets.ante * 2)
             # Update player balance
             self.player_balance.remove_funds(self.bets.ante * 2)
             self.state_seven()
+        else:
+            print('Invalid action')
+            # wait for 1.5 seconds
+            time.sleep(1.5)
+            self.state_six()
 
     def state_seven(self):
         self.print_game()
@@ -483,17 +517,26 @@ class Game:
         # Ask player for Fold/ Bet 1x
         player_action = input('Enter action (fold, bet 1x): ')
         if player_action == 'fold':
+            # wait for 1.5 seconds
+            time.sleep(1.5)
             self.state_eleven()
         elif player_action == 'bet 1x':
             # Check if player has enough money
             if self.player_balance.balance < self.bets.ante:
-                print('Not enough money')
+                print('Not enough money, Lost hand')
+                # wait for 1.5 seconds
+                time.sleep(1.5)
                 self.state_zero()
             # Place bet
             self.bets.add_play(self.bets.ante)
             # Update player balance
             self.player_balance.remove_funds(self.bets.ante)
             self.state_ten()
+        else:
+            print('Invalid action')
+            # wait for 1.5 seconds
+            time.sleep(1.5)
+            self.state_nine()
 
     def state_ten(self):
         # Deal dealer hand
@@ -503,28 +546,51 @@ class Game:
         winner = check_winner(self.player_hand, self.dealer_hand, self.board)
         player_final_hand = return_hand(self.player_hand, self.board)
         dealer_final_hand = return_hand(self.dealer_hand, self.board)
-        # TODO: Added total amount on money won
-        trips_payout = get_trips_payout(player_final_hand, self.bets.trips)
-        # Update player balance
+        trips_payout = get_trips_payout(player_final_hand[1], self.bets.trips)
+        self.money_won_in_round += trips_payout
+        # Add Trips bet and winnings to player balance
         self.player_balance.add_funds(trips_payout)
         if winner == 'Player':
-            blind_payout = get_blind_payout(player_final_hand, self.bets.blind)
+            blind_payout = get_blind_payout(player_final_hand[1], self.bets.blind)
+            # Add Blind and play bets and winnings to player balance
             self.player_balance.add_funds(blind_payout + self.bets.play * 2)
-            # TODO: pay ante only if dealer has a pair or better
-            self.player_balance.add_funds(self.bets.ante * 2)
+            self.money_won_in_round += blind_payout + self.bets.play * 2
+            if dealer_final_hand != 'High Card':
+                # Add Ante win to player balance
+                self.player_balance.add_funds(self.bets.ante)
+                self.money_won_in_round += self.bets.ante
+            # Add Ante bet to player balance
+            self.player_balance.add_funds(self.bets.ante)
+            self.money_won_in_round += self.bets.ante
+        elif winner == 'Tie':
+            # Add Ante, play and Blind bets to player balance
+            self.player_balance.add_funds(self.bets.ante + self.bets.play + self.bets.blind)
+            self.money_won_in_round += self.bets.ante + self.bets.play + self.bets.blind
         print(f'{winner} wins')
         print('Player hand: {}'.format(player_final_hand))
         print('Dealer hand: {}'.format(dealer_final_hand))
+        print('Money won in round: {}'.format(self.money_won_in_round - sum(self.bets.get_bets())))
+        # wait for 1.5 seconds
+        time.sleep(1.5)
         self.state_zero()
 
     def state_eleven(self):
-        self.print_game()
+        self.dealer_hand = self.deck.deal_two_cards()
         player_final_hand = return_hand(self.player_hand, self.board)
+        dealer_final_hand = return_hand(self.dealer_hand, self.board)
         # pay for trips
-        trips_payout = get_trips_payout(player_final_hand, self.bets.trips)
+        trips_payout = get_trips_payout(player_final_hand[0], self.bets.trips)
+        self.money_won_in_round += trips_payout
         # Update player balance
         self.player_balance.add_funds(trips_payout)
         print('Player folds')
+        print('Player hand: {}'.format(player_final_hand))
+        print('Dealer hand: {}'.format(dealer_final_hand))
+        self.print_game()
+        if (trips_payout > 0):
+            print('trips payout: {}'.format(trips_payout - self.bets.get_bets()[2]))
+        # wait for 1.5 seconds
+        time.sleep(1.5)
         self.state_zero()
 
 
@@ -563,4 +629,116 @@ def get_blind_payout(hand, blind):
     else:
         return blind
 
-# TODO: check player input in each state
+
+def get_winner_if_same_hand_rank(player_hand, dealer_hand, hand_rank):
+    if hand_rank == 'High Card':
+        # Compare high cards
+        for i in range(5):
+            if player_hand[1][i][0] > dealer_hand[1][i][0]:
+                return 'Player'
+            elif player_hand[1][i][0] < dealer_hand[1][i][0]:
+                return 'Dealer'
+        return 'Tie'
+
+    elif hand_rank == 'Pair':
+        # Compare pairs
+        if player_hand[1][0][0] > dealer_hand[1][0][0]:
+            return 'Player'
+        elif player_hand[1][0][0] < dealer_hand[1][0][0]:
+            return 'Dealer'
+        # Compare high cards (last 3 cards)
+        for i in range(3):
+            if player_hand[1][i + 2][0] > dealer_hand[1][i + 2][0]:
+                return 'Player'
+            elif player_hand[1][i + 2][0] < dealer_hand[1][i + 2][0]:
+                return 'Dealer'
+        return 'Tie'
+
+    elif hand_rank == 'Two Pair':
+        # Compare first pair
+        if player_hand[1][0][0] > dealer_hand[1][0][0]:
+            return 'Player'
+        elif player_hand[1][0][0] < dealer_hand[1][0][0]:
+            return 'Dealer'
+        # Compare second pair
+        if player_hand[1][2][0] > dealer_hand[1][2][0]:
+            return 'Player'
+        elif player_hand[1][2][0] < dealer_hand[1][2][0]:
+            return 'Dealer'
+        # Compare high card
+        if player_hand[1][4][0] > dealer_hand[1][4][0]:
+            return 'Player'
+        elif player_hand[1][4][0] < dealer_hand[1][4][0]:
+            return 'Dealer'
+        return 'Tie'
+
+    elif hand_rank == 'Three of a Kind':
+        # Compare three of a kind
+        if player_hand[1][0][0] > dealer_hand[1][0][0]:
+            return 'Player'
+        elif player_hand[1][0][0] < dealer_hand[1][0][0]:
+            return 'Dealer'
+        # Compare high cards
+        if player_hand[1][3][0]> dealer_hand[1][3][0]:
+            return 'Player'
+        elif player_hand[1][3][0] < dealer_hand[1][3][0]:
+            return 'Dealer'
+        if player_hand[1][4][0] > dealer_hand[1][4][0]:
+            return 'Player'
+        elif player_hand[1][4][0] < dealer_hand[1][4][0]:
+            return 'Dealer'
+        return 'Tie'
+
+    elif hand_rank == 'Straight':
+        # Compare high card
+        if player_hand[1][0][0] > dealer_hand[1][0][0]:
+            return 'Player'
+        elif player_hand[1][0][0] < dealer_hand[1][0][0]:
+            return 'Dealer'
+        return 'Tie'
+
+    elif hand_rank == 'Flush':
+        # Compare high cards
+        for i in range(5):
+            if player_hand[1][i][0] > dealer_hand[1][i][0]:
+                return 'Player'
+            elif player_hand[1][i][0] < dealer_hand[1][i][0]:
+                return 'Dealer'
+        return 'Tie'
+
+    elif hand_rank == 'Full House':
+        # Compare three of a kind
+        if player_hand[1][0][0] > dealer_hand[1][0][0]:
+            return 'Player'
+        elif player_hand[1][0][0] < dealer_hand[1][0][0]:
+            return 'Dealer'
+        # Compare pair
+        if player_hand[1][3][0] > dealer_hand[1][3][0]:
+            return 'Player'
+        elif player_hand[1][3][0] < dealer_hand[1][3][0]:
+            return 'Dealer'
+        return 'Tie'
+
+    elif hand_rank == 'Four of a Kind':
+        # Compare four of a kind
+        if player_hand[1][0][0] > dealer_hand[1][0][0]:
+            return 'Player'
+        elif player_hand[1][0][0] < dealer_hand[1][0][0]:
+            return 'Dealer'
+        # Compare high card
+        if player_hand[1][4][0] > dealer_hand[1][4][0]:
+            return 'Player'
+        elif player_hand[1][4][0] < dealer_hand[1][4][0]:
+            return 'Dealer'
+        return 'Tie'
+
+    elif hand_rank == 'Straight Flush':
+        # Compare high card
+        if player_hand[1][0][0] > dealer_hand[1][0][0]:
+            return 'Player'
+        elif player_hand[1][0][0] < dealer_hand[1][0][0]:
+            return 'Dealer'
+        return 'Tie'
+
+    elif hand_rank == 'Royal Flush':
+        return 'Tie'

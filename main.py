@@ -6,12 +6,12 @@ start = time.time()
 statistics = {'High Card': 0, 'Pair': 0, 'Two Pair': 0, 'Three of a Kind': 0, 'Straight': 0, 'Flush': 0,
               'Full House': 0, 'Four of a Kind': 0, 'Straight Flush': 0, 'Royal Flush': 0}
 deck = Deck()
-num_of_hands = 1
+num_of_hands = 100
 # for i in range(num_of_hands):
 #     deck.shuffle()
-#     hole_cards = deck.deal_two_cards_for_testing()
-#     dealer_hand = deck.deal_two_cards_for_testing()
-#     board_cards = deck.deal_five_cards_for_testing()
+#     hole_cards = deck.deal_two_cards()
+#     dealer_hand = deck.deal_two_cards()
+#     board_cards = deck.deal_five_cards()
 #     check = return_hand(hole_cards, board_cards)
 #     if check[0] == 'High Card':
 #         statistics['High Card'] += 1
@@ -23,6 +23,7 @@ num_of_hands = 1
 #         statistics['Three of a Kind'] += 1
 #     elif check[0] == 'Straight':
 #         statistics['Straight'] += 1
+#         print(check[1])
 #     elif check[0] == 'Flush':
 #         statistics['Flush'] += 1
 #     elif check[0] == 'Full House':
@@ -33,10 +34,10 @@ num_of_hands = 1
 #         statistics['Straight Flush'] += 1
 #     elif check[0] == 'Royal Flush':
 #         statistics['Royal Flush'] += 1
-#     print(f'hole cards: {hole_cards}')
-#     print(f'dealer hand: {dealer_hand}')
-#     print(f'board cards: {board_cards}')
-#     print(check_winner(hole_cards, dealer_hand, board_cards))
+    # print(f'hole cards: {hole_cards}')
+    # print(f'dealer hand: {dealer_hand}')
+    # print(f'board cards: {board_cards}')
+    # print(check_winner(hole_cards, dealer_hand, board_cards))
 
 game = Game()
 game.start_game()

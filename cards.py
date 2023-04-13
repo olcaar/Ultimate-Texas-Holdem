@@ -47,7 +47,6 @@ class Deck:
         return [self.cards.pop() for i in range(5)]
 
 
-
 class PlayerBalance:
     def __init__(self, balance):
         self.balance = balance
@@ -340,14 +339,10 @@ def check_winner(player_hand, dealer_hand, board):
         return 'Player'
     elif hand_values[player_hand[0]] < hand_values[dealer_hand[0]]:
         return 'Dealer'
-    # TODO: compare hands if they are the same
+    # TODO: compare hands if they are the same rank
     else:
         return 'Tie'
 
-
-# Create a state machine for the game : 0. IDLE, 1. BETTING, 2. DEALING,
-# 3. PLAYER_TURN_PRE_FLOP, 4. PLAYER_BET_3X_OR_4X, 5. OPEN_FLOP, 6. PLAYER_TURN_FLOP, 7. PLAYER_BET_2X,
-# 8. OPEN_TURN_AND_RIVER, 9. PLAYER_TURN_FULL_BOARD, 10. SHOWDOWN, 11. UPDATE_BALANCE
 
 States = {'IDLE': 0, 'BETTING': 1, 'DEALING': 2, 'PLAYER_TURN_PRE_FLOP': 3, 'PLAYER_BET_3X_OR_4X': 4, 'OPEN_FLOP': 5,
           'PLAYER_TURN_FLOP': 6, 'PLAYER_BET_2X': 7, 'OPEN_TURN_AND_RIVER': 8, 'PLAYER_TURN_FULL_BOARD': 9,
@@ -365,7 +360,7 @@ class Game:
 
     def print_game(self):
         # Delete terminal
-        os.system('cls' if os.name == 'nt' else 'clear')
+        print('\n' * 80)  # prints 80 line breaks
         # Print game state
         print('Player balance: {}'.format(self.player_balance.balance))
         print('Board: {}'.format(self.board))
@@ -393,7 +388,7 @@ class Game:
         trips_bet = int(input('Enter trips bet: '))
         # Check if player has enough money
         if self.player_balance.balance < ante_bet * 2 + trips_bet:
-            print('Not enough money')
+            input('Not enough money, press enter to try lower bets')
             self.state_one()
             return
         # Place bets
@@ -494,7 +489,6 @@ class Game:
             if self.player_balance.balance < self.bets.ante:
                 print('Not enough money')
                 self.state_zero()
-                return
             # Place bet
             self.bets.add_play(self.bets.ante)
             # Update player balance
@@ -509,13 +503,14 @@ class Game:
         winner = check_winner(self.player_hand, self.dealer_hand, self.board)
         player_final_hand = return_hand(self.player_hand, self.board)
         dealer_final_hand = return_hand(self.dealer_hand, self.board)
+        # TODO: Added total amount on money won
         trips_payout = get_trips_payout(player_final_hand, self.bets.trips)
         # Update player balance
         self.player_balance.add_funds(trips_payout)
         if winner == 'Player':
             blind_payout = get_blind_payout(player_final_hand, self.bets.blind)
             self.player_balance.add_funds(blind_payout + self.bets.play * 2)
-            #TODO: pay ante only if dealer has a pair or better
+            # TODO: pay ante only if dealer has a pair or better
             self.player_balance.add_funds(self.bets.ante * 2)
         print(f'{winner} wins')
         print('Player hand: {}'.format(player_final_hand))
@@ -567,3 +562,5 @@ def get_blind_payout(hand, blind):
         return blind * 1 + blind
     else:
         return blind
+
+# TODO: check player input in each state

@@ -5,8 +5,8 @@ import time
 start = time.time()
 statistics = {'High Card': 0, 'Pair': 0, 'Two Pair': 0, 'Three of a Kind': 0, 'Straight': 0, 'Flush': 0,
               'Full House': 0, 'Four of a Kind': 0, 'Straight Flush': 0, 'Royal Flush': 0}
-deck = Deck()
-num_of_hands = 100
+# deck = Deck()
+# num_of_hands = 1000000
 # for i in range(num_of_hands):
 #     deck.shuffle()
 #     hole_cards = deck.deal_two_cards()
@@ -23,7 +23,6 @@ num_of_hands = 100
 #         statistics['Three of a Kind'] += 1
 #     elif check[0] == 'Straight':
 #         statistics['Straight'] += 1
-#         print(check[1])
 #     elif check[0] == 'Flush':
 #         statistics['Flush'] += 1
 #     elif check[0] == 'Full House':
@@ -46,5 +45,5 @@ game.start_game()
 # # print the percentage of each hand
 # for key, value in statistics.items():
 #     print(f'{key}: {value / num_of_hands * 100}%')
-print(f'time to run: {time.time() - start}')
-print('done')
+# print(f'time to run: {time.time() - start}')
+# print('done')

@@ -384,8 +384,8 @@ class Game:
         self.dealer_hand = []
         self.bets = Bets()
         self.print_game()
-        self.state_one()
         self.money_won_in_round = 0
+        self.state_one()
 
     def state_one(self):
         self.print_game()
@@ -631,6 +631,7 @@ def get_blind_payout(hand, blind):
 
 
 def get_winner_if_same_hand_rank(player_hand, dealer_hand, hand_rank):
+    # FIXME: hand[1][x][0] error if x is broadway ('A', 'K', 'Q', 'J'). need to compare broadway cards somehow
     if hand_rank == 'High Card':
         # Compare high cards
         for i in range(5):
